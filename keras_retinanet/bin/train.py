@@ -208,7 +208,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
     if args.early_stopping:
         callbacks.append(keras.callbacks.EarlyStopping(
             monitor='mAP',
-            min_delta=args.early_stopping_min_delta,
+            min_delta=args.early_stopping_minim_delta,
             patience=args.early_stopping_patience,
             verbose=1,
             mode='max',
@@ -424,10 +424,10 @@ def parse_args(args):
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
 
     # Early stopping arguments
-    parser.add_argument('--early_stopping',   help='Activate early stopping', action='store_true')
-    parser.add_argument('--early_stopping_min_delta',        help='Min_delta param for early stopping', type=float, default=0)
-    parser.add_argument('--early_stopping_patience',         help='Patience param for early stopping', type=int, default=5)
-    parser.add_argument('--early_stopping_baseline',         help='Baseline param for early stopping', default=None)
+    parser.add_argument('--early-stopping',   help='Activate early stopping', action='store_true')
+    parser.add_argument('--early-stopping-minim-delta',        help='Min_delta param for early stopping', type=float, default=0)
+    parser.add_argument('--early-stopping-patience',         help='Patience param for early stopping', type=int, default=5)
+    parser.add_argument('--early-stopping-baseline',         help='Baseline param for early stopping', default=None)
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)
