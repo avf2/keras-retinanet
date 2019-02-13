@@ -37,6 +37,7 @@ from .. import losses
 from .. import models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
+from ..callbacks.s3_push import S3StoreResults
 from ..models.retinanet import retinanet_bbox
 from ..preprocessing.csv_generator import CSVGenerator
 from ..preprocessing.kitti import KittiGenerator
@@ -214,6 +215,14 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             mode='max',
             baseline=args.early_stopping_baseline,
             restore_best_weights=True
+        ))
+
+    if args.save_to_s3:
+        callbacks.append(S3StoreResults(
+            os.environ.get('BUCKET_NAME', 'transchile'),
+            snapshots_dir=args.snapshot_path,
+            tensorboard_dir=args.tensorboard_dir,
+            verbose=1
         ))
 
     return callbacks
@@ -412,6 +421,7 @@ def parse_args(args):
     parser.add_argument('--epochs',           help='Number of epochs to train.', type=int, default=50)
     parser.add_argument('--steps',            help='Number of steps per epoch.', type=int, default=2)
     parser.add_argument('--lr',               help='Learning rate.', type=float, default=1e-5)
+    parser.add_argument('--save-to-s3',       help='Flag to enablos storing of snapshots and logs to s3.', action='store_true')
     parser.add_argument('--snapshot-path',    help='Path to store snapshots of models during training (defaults to \'./snapshots\')', default='./snapshots')
     parser.add_argument('--tensorboard-dir',  help='Log directory for Tensorboard output', default='./logs')
     parser.add_argument('--no-snapshots',     help='Disable saving snapshots.', dest='snapshots', action='store_false')
