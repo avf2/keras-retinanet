@@ -49,16 +49,14 @@ class S3StoreResults(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if self.snapshots_dir is not None:
-            files_already_in_s3 = \
-                s3t.list_files_from_bucket_path(self.s3_snapshots_key, self.s3_bucket)
+            snapshots_already_in_s3 = \
+                [os.path.basename(f) for f in s3t.list_files_from_bucket_path(self.s3_snapshots_key, self.s3_bucket)]
             for snps_file in os.listdir(self.snapshots_dir):
-                src_path = os.path.join(self.snapshots_dir, snps_file)
-                dst_key = os.path.join(self.s3_snapshots_key)
-                if dst_key not in files_already_in_s3:
-                    s3t.upload_file_to_bucket(src_path, dst_key, self.s3_bucket, verbose=self.verbose)
+                if snps_file not in snapshots_already_in_s3:
+                    src_path = os.path.join(self.snapshots_dir, snps_file)
+                    s3t.upload_file_to_bucket(src_path, self.s3_snapshots_key, self.s3_bucket, verbose=self.verbose)
 
         if self.tensorboard_dir is not None:
             for tnsb_file in os.listdir(self.tensorboard_dir):
                 src_path = os.path.join(self.tensorboard_dir, tnsb_file)
-                dst_key = os.path.join(self.s3_tensorboard_key)
-                s3t.upload_file_to_bucket(src_path, dst_key, self.s3_bucket, verbose=self.verbose)
+                s3t.upload_file_to_bucket(src_path, self.s3_tensorboard_key, self.s3_bucket, verbose=self.verbose)
