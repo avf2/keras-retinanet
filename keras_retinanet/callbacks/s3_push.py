@@ -49,12 +49,15 @@ class S3StoreResults(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         if self.snapshots_dir is not None:
-            snapshots_already_in_s3 = \
-                [os.path.basename(f) for f in s3t.list_files_from_bucket_path(self.s3_snapshots_key, self.s3_bucket)]
+            # snapshots_already_in_s3 = \
+            #     [os.path.basename(f) for f in s3t.list_files_from_bucket_path(self.s3_snapshots_key, self.s3_bucket)]
             for snps_file in os.listdir(self.snapshots_dir):
-                if snps_file not in snapshots_already_in_s3:
-                    src_path = os.path.join(self.snapshots_dir, snps_file)
+                src_path = os.path.join(self.snapshots_dir, snps_file)
+                if snps_file == 'resnet50_csv_{:02}.h5'.format(epoch):
+                    # if snps_file not in snapshots_already_in_s3:
                     s3t.upload_file_to_bucket(src_path, self.s3_snapshots_key, self.s3_bucket, verbose=self.verbose)
+                else:
+                    os.remove(src_path)
 
         if self.tensorboard_dir is not None:
             for tnsb_file in os.listdir(self.tensorboard_dir):
