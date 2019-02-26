@@ -38,7 +38,7 @@ def get_session():
     """ Construct a modified tf session.
     """
     config = tf.ConfigProto()
-    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    # os.environ["CUDA_VISIBLE_DEVICES"] = ""
     return tf.Session(config=config)
 
 
