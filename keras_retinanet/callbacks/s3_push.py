@@ -44,20 +44,29 @@ class S3StoreResults(keras.callbacks.Callback):
         self.s3_root_key = 'sagemaker/training_jobs/{}'.format(training_job_name)
         self.s3_snapshots_key = os.path.join(self.s3_root_key, 'snapshots')
         self.s3_tensorboard_key = os.path.join(self.s3_root_key, 'tensorboard')
+        self.uploaded_weights = []
 
         super(S3StoreResults, self).__init__()
 
     def on_epoch_end(self, epoch, logs=None):
         if self.snapshots_dir is not None:
+            print('Epoch is {}'.format(epoch))
+            # print('Snapshots file searched for is {}'.format('resnet50_csv_{:02}.h5'.format(epoch+1)))
             # snapshots_already_in_s3 = \
             #     [os.path.basename(f) for f in s3t.list_files_from_bucket_path(self.s3_snapshots_key, self.s3_bucket)]
             for snps_file in os.listdir(self.snapshots_dir):
                 src_path = os.path.join(self.snapshots_dir, snps_file)
-                if snps_file == 'resnet50_csv_{:02}.h5'.format(epoch):
-                    # if snps_file not in snapshots_already_in_s3:
-                    s3t.upload_file_to_bucket(src_path, self.s3_snapshots_key, self.s3_bucket, verbose=self.verbose)
-                else:
+                if snps_file in self.uploaded_weights:
                     os.remove(src_path)
+                    print('Weights {} removed'.format(snps_file))
+                else:
+                    self.uploaded_weights.append(snps_file)
+                    s3t.upload_file_to_bucket(src_path, self.s3_snapshots_key, self.s3_bucket, verbose=self.verbose)
+                # if snps_file == 'resnet50_csv_{:02}.h5'.format(epoch+1):
+                #     # if snps_file not in snapshots_already_in_s3:
+                #     s3t.upload_file_to_bucket(src_path, self.s3_snapshots_key, self.s3_bucket, verbose=self.verbose)
+                # else:
+                #     os.remove(src_path)
 
         if self.tensorboard_dir is not None:
             for tnsb_file in os.listdir(self.tensorboard_dir):
