@@ -477,6 +477,7 @@ def main(args=None):
         anchor_params    = None
         if args.config and 'anchor_parameters' in args.config:
             anchor_params = parse_anchor_parameters(args.config)
+            print('Anchors used: {}'.format(args.config))
         prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
     else:
         weights = args.weights
