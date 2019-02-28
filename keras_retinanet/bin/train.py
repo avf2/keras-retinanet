@@ -464,8 +464,8 @@ def main(args=None):
 
     # optionally load config parameters
     if args.config:
+        print('Anchors read from: {}'.format(args.config))
         args.config = read_config_file(args.config)
-        print('Anchors used: {}'.format(args.config))
 
     # create the generators
     train_generator, validation_generator = create_generators(args, backbone.preprocess_image)
