@@ -154,7 +154,8 @@ def parse_args(args):
     parser.add_argument('-l', '--loop', help='Loop forever, even if the dataset is exhausted.', action='store_true')
     parser.add_argument('--no-resize', help='Disable image resizing.', dest='resize', action='store_false')
     parser.add_argument('--anchors', help='Show positive anchors on the image.', action='store_true')
-    parser.add_argument('--annotations', help='Show annotations on the image. Green annotations have anchors, red annotations don\'t and therefore don\'t contribute to training.', action='store_true')
+    parser.add_argument('--show-annotations', help='Show annotations on the image. Green annotations have anchors, red '
+                        'annotations don\'t and therefore don\'t contribute to training.', action='store_true')
     parser.add_argument('--random-transform', help='Randomly transform image and annotations.', action='store_true')
     parser.add_argument('--image-min-side', help='Rescale the image so the smallest side is min_side.', type=int, default=800)
     parser.add_argument('--image-max-side', help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
@@ -170,11 +171,17 @@ def run(generator, args, anchor_params):
         generator: The generator to debug.
         args: parseargs args object.
     """
+    n_total_labels = 0
+    n_invalid_labels = 0
     # display images, one at a time
     for i in range(generator.size()):
         # load the data
         image       = generator.load_image(i)
         annotations = generator.load_annotations(i)
+
+        n_annotations = len(annotations['labels'])
+        ids_annotations = list(range(n_annotations))
+        n_total_labels += n_annotations
 
         # apply random transformations
         if args.random_transform:
@@ -188,12 +195,15 @@ def run(generator, args, anchor_params):
         anchors = anchors_for_shape(image.shape, anchor_params=anchor_params)
         positive_indices, _, max_indices = compute_gt_annotations(anchors, annotations['bboxes'])
 
+        invalid_labels = [id for id in ids_annotations if id not in set(max_indices[positive_indices])]
+        n_invalid_labels += len(invalid_labels)
+
         # draw anchors on the image
         if args.anchors:
             draw_boxes(image, anchors[positive_indices], (255, 255, 0), thickness=1)
 
         # draw annotations on the image
-        if args.annotations:
+        if args.show_annotations:
             # draw annotations in red
             draw_annotations(image, annotations, color=(0, 0, 255), label_to_name=generator.label_to_name)
 
@@ -201,9 +211,12 @@ def run(generator, args, anchor_params):
             # result is that annotations without anchors are red, with anchors are green
             draw_boxes(image, annotations['bboxes'][max_indices[positive_indices], :], (0, 255, 0))
 
-        cv2.imshow('Image', image)
-        if cv2.waitKey() == ord('q'):
-            return False
+        if args.anchors or args.show_annotations:
+            cv2.imshow('Image', image)
+            if cv2.waitKey() == ord('q'):
+                return False
+    print("{} labels were invalid out of {}, i.e. a {:.2f}%"
+          .format(n_invalid_labels, n_total_labels, 100*n_invalid_labels/n_total_labels))
     return True
 
 
@@ -229,9 +242,10 @@ def main(args=None):
         anchor_params = parse_anchor_parameters(args.config)
 
     # create the display window
-    cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
+    if args.anchors or args.show_annotations:
+        cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
 
-    if args.loop:
+    if args.loop and (args.anchors or args.show_annotations):
         while run(generator, args, anchor_params=anchor_params):
             pass
     else:
