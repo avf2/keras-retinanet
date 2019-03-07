@@ -1,0 +1,14 @@
+name: Keras Retinanet
+
+conda_env: conda.yaml
+
+entry_points:
+  main:
+    parameters:
+      epochs: {type: float, default: 10}
+      steps: {type: float, default: 2}
+      train_file: {type: path, default: /home/sbduser/ferrovial_flydays/mlflow/data/dataset_12/train_annotations.csv}
+      validation_file: {type: path, default: /home/sbduser/ferrovial_flydays/mlflow/data/dataset_12/validation_annotations.csv}
+      class_map_file: {type: path, default: /home/sbduser/ferrovial_flydays/mlflow/data/dataset_12/class_map.csv}
+    command: "python keras_retinanet/bin/train.py --epochs {epochs} --steps {steps} csv {train_file} {class_map_file}
+     --val-annotations {validation_file}"
