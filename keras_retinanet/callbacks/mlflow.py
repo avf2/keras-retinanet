@@ -1,6 +1,10 @@
+"""
+Callback inspired in https://github.com/mlflow/mlflow/blob/master/examples/hyperparam/train.py
+"""
 import math
 import keras
 import mlflow
+import mlflow.keras
 
 
 # train_losses = ['regression_loss', 'classification_loss', 'loss']
@@ -52,9 +56,4 @@ class MLflowCheckpoint(keras.callbacks.Callback):
             # The result improved in the validation set.
             # Log the model with mlflow and also evaluate and log on test set.
             self._best_val_metric = val_metric_value
-            self._best_model = keras.models.clone_model(self.model)
-            self._best_model.set_weights([x.copy() for x in self.model.get_weights()])
-            mlflow.keras.log_model(self._best_model, "model")
-
-    def on_train_end(self, logs=None):
-        mlflow.keras.log_model(self._best_model, "model")
+            mlflow.keras.log_model(self.model, "best_model")
