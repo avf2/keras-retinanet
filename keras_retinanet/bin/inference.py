@@ -74,6 +74,7 @@ def parse_args(args):
     parser.add_argument('--max-detections',   help='Max Detections per image (defaults to 100).', default=100, type=int)
     parser.add_argument('--save-path',        help='Path for saving outputs.', default='/tmp/retinanet/output')
     parser.add_argument('--predictions-filename', required=True, help='Filename for saving outputs.')
+    parser.add_argument('--class-map-filename', required=True, help='Filename for class-map used.')
     parser.add_argument('--save-output-imgs', help='Convert the model to an inference model (ie. the input is a training model).', action='store_true')
     parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=800)
     parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
@@ -133,26 +134,27 @@ def main(args=None):
     )
 
     filtered_detections_df = pd.DataFrame(columns=['frame_path', 'class', 'x1', 'y1', 'x2', 'y2', 'confidence'])
-    filtered_detections = {
-        'class-map': {v: k for k, v in generator.classes.items()},
-        'detections': dict()
-    }
+    class_map = {v: k for k, v in generator.classes.items()}
+    # filtered_detections = {
+    #     'class-map': {v: k for k, v in generator.classes.items()},
+    #     'detections': dict()
+    # }
     for image_idx in range(generator.size()):
         frame_path = generator.image_path(image_idx)
-        filtered_detections['detections'][frame_path] = dict()
+        # filtered_detections['detections'][frame_path] = dict()
         for label in range(generator.num_classes()):
             class_detections = all_detections[image_idx][label]
             if class_detections.size == 0:
                 continue
-            detections = []
+            # detections = []
             for detection_idx in range(class_detections.shape[0]):
-                detections.append({
-                    'x1': class_detections[detection_idx, 0],
-                    'y1': class_detections[detection_idx, 1],
-                    'x2': class_detections[detection_idx, 2],
-                    'y2': class_detections[detection_idx, 3],
-                    'confidence': class_detections[detection_idx, 4],
-                })
+                # detections.append({
+                #     'x1': class_detections[detection_idx, 0],
+                #     'y1': class_detections[detection_idx, 1],
+                #     'x2': class_detections[detection_idx, 2],
+                #     'y2': class_detections[detection_idx, 3],
+                #     'confidence': class_detections[detection_idx, 4],
+                # })
                 filtered_detections_df = filtered_detections_df.append({
                     'frame_path': frame_path,
                     'class': label,
@@ -162,13 +164,13 @@ def main(args=None):
                     'y2': class_detections[detection_idx, 3],
                     'confidence': class_detections[detection_idx, 4]
                 }, ignore_index=True)
-            filtered_detections['detections'][frame_path][label] = detections
+            # filtered_detections['detections'][frame_path][label] = detections
 
-    output_json_path = os.path.join(args.save_path, args.predictions_filename + '.json')
-    with open(output_json_path, 'w') as jf:
-        json.dump(filtered_detections, jf)
+    output_class_map_path = os.path.join(args.save_path, args.class_map_filename)
+    with open(output_class_map_path, 'w') as jf:
+        json.dump(class_map, jf)
 
-    output_csv_path = os.path.join(args.save_path, args.predictions_filename + '.csv')
+    output_csv_path = os.path.join(args.save_path, args.predictions_filename)
     filtered_detections_df.to_csv(output_csv_path, index=False)
 
 
