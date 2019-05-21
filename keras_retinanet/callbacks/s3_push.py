@@ -39,9 +39,8 @@ class S3StoreResults(keras.callbacks.Callback):
         self.tensorboard_dir = tensorboard_dir
         self.verbose = verbose
 
-        training_job_name = os.environ.get('TRAINING_JOB_NAME',
-                                           datetime.datetime.utcnow().strftime("retinanet_%Y%m%d_%H%M"))
-        self.s3_root_key = 'sagemaker/training_jobs/{}'.format(training_job_name)
+        training_job_name = os.environ.get('TRAINING_JOB_NAME', datetime.datetime.utcnow().strftime("%Y%m%d_%H%M"))
+        self.s3_root_key = 'machine_learning/models/retinanet/{}'.format(training_job_name)
         self.s3_snapshots_key = os.path.join(self.s3_root_key, 'snapshots')
         self.s3_tensorboard_key = os.path.join(self.s3_root_key, 'tensorboard')
         self.uploaded_weights = []
