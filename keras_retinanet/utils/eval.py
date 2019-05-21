@@ -18,6 +18,7 @@ from .anchors import compute_overlap
 from .visualization import draw_detections, draw_annotations
 
 import keras
+from keras.models import Model
 import numpy as np
 import os
 
@@ -53,6 +54,40 @@ def _compute_ap(recall, precision):
     # and sum (\Delta recall) * prec
     ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
+
+
+def _get_inner_features(generator, model, inner_layer_name):
+    """ Get features from inner layer of the model using the generator.
+
+    The result is an array containing inner features for each image such that the size is:
+        all_features[num_images][flattened_size_of_inner_layer_name]
+
+    # Arguments
+        generator        : The generator used to run images through the model.
+        model            : The model to run on the images.
+        inner_layer_name : Name of the layer whose features are to be returned
+    # Returns
+        inner features array
+    """
+    inner_layer = model.get_layer(inner_layer_name)
+    inner_layer_model = Model(inputs=model.input, outputs=inner_layer.output)
+
+    all_features = []
+
+    for i in progressbar.progressbar(range(generator.size()), prefix='Running network: '):
+        raw_image    = generator.load_image(i)
+        image        = generator.preprocess_image(raw_image.copy())
+        image, scale = generator.resize_image(image)
+
+        if keras.backend.image_data_format() == 'channels_first':
+            image = image.transpose((2, 0, 1))
+
+        # run network
+        features = inner_layer_model.predict_on_batch(np.expand_dims(image, axis=0))
+        all_features.append(features.flatten())
+
+    all_features = np.array(all_features)
+    return all_features
 
 
 def _get_detections(generator, model, score_threshold=0.05, max_detections=100, save_path=None):
