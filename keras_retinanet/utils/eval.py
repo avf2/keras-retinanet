@@ -56,41 +56,7 @@ def _compute_ap(recall, precision):
     return ap
 
 
-def _get_inner_features(generator, model, inner_layer_name):
-    """ Get features from inner layer of the model using the generator.
-
-    The result is an array containing inner features for each image such that the size is:
-        all_features[num_images][flattened_size_of_inner_layer_name]
-
-    # Arguments
-        generator        : The generator used to run images through the model.
-        model            : The model to run on the images.
-        inner_layer_name : Name of the layer whose features are to be returned
-    # Returns
-        inner features array
-    """
-    inner_layer = model.get_layer(inner_layer_name)
-    inner_layer_model = Model(inputs=model.input, outputs=inner_layer.output)
-
-    all_features = []
-
-    for i in progressbar.progressbar(range(generator.size()), prefix='Running network: '):
-        raw_image    = generator.load_image(i)
-        image        = generator.preprocess_image(raw_image.copy())
-        image, scale = generator.resize_image(image)
-
-        if keras.backend.image_data_format() == 'channels_first':
-            image = image.transpose((2, 0, 1))
-
-        # run network
-        features = inner_layer_model.predict_on_batch(np.expand_dims(image, axis=0))
-        all_features.append(features.flatten())
-
-    all_features = np.array(all_features)
-    return all_features
-
-
-def _get_detections(generator, model, score_threshold=0.05, max_detections=100, save_path=None):
+def _get_detections(generator, model, score_threshold=0.05, max_detections=100, save_path=None, inner_layer_name=None):
     """ Get the detections from the model using the generator.
 
     The result is a list of lists such that the size is:
@@ -102,10 +68,16 @@ def _get_detections(generator, model, score_threshold=0.05, max_detections=100, 
         score_threshold : The score confidence threshold to use.
         max_detections  : The maximum number of detections to use per image.
         save_path       : The path to save the images with visualized detections to.
+        inner_layer_name: If inner_layer_name is not None, features from that layer will be returned
     # Returns
         A list of lists containing the detections for each image in the generator.
     """
     all_detections = [[None for i in range(generator.num_classes()) if generator.has_label(i)] for j in range(generator.size())]
+
+    if inner_layer_name is not None:
+        inner_layer = model.get_layer(inner_layer_name)
+        model = Model(inputs=model.input, outputs=model.get_layer(index=-1).output + [inner_layer.output])
+        all_features = []
 
     for i in progressbar.progressbar(range(generator.size()), prefix='Running network: '):
         raw_image    = generator.load_image(i)
@@ -117,7 +89,11 @@ def _get_detections(generator, model, score_threshold=0.05, max_detections=100, 
             image = image.transpose((2, 0, 1))
 
         # run network
-        boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))[:3]
+        if inner_layer_name is None:
+            boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+        else:
+            boxes, scores, labels, features = model.predict_on_batch(np.expand_dims(image, axis=0))
+            all_features.append(features.flatten())
 
         # correct boxes for image scale
         boxes /= scale
@@ -150,7 +126,11 @@ def _get_detections(generator, model, score_threshold=0.05, max_detections=100, 
 
             all_detections[i][label] = image_detections[image_detections[:, -1] == label, :-1]
 
-    return all_detections
+    if inner_layer_name is None:
+        return all_detections
+    else:
+        all_features = np.array(all_features)
+        return all_detections, all_features
 
 
 def _get_annotations(generator):

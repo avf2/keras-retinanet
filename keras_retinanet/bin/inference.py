@@ -34,7 +34,7 @@ if __name__ == "__main__" and __package__ is None:
 from .. import models
 from ..preprocessing.csv_generator import CSVGenerator
 from ..utils.config import read_config_file, parse_anchor_parameters
-from ..utils.eval import _get_detections, _get_inner_features
+from ..utils.eval import _get_detections
 from ..utils.keras_version import check_keras_version
 
 
@@ -108,6 +108,12 @@ def main(args=None):
     if args.config:
         args.config = read_config_file(args.config)
 
+    if args.inner_features_file is not None:
+        assert args.inner_features_file.endswith('.npz'), "inner_features_file's extension should be .npz"
+        get_inner_features = True
+    else:
+        get_inner_features = False
+
     # create the generator
     generator = create_generator(args)
 
@@ -124,19 +130,21 @@ def main(args=None):
     if args.convert_model:
         model = models.convert_model(model, anchor_params=anchor_params)
 
-    if args.inner_features_file is not None:
-        assert args.inner_features_file.endswith('.npz'), "inner_features_file's extension should be .npz"
-        all_features = _get_inner_features(generator, model, args.inner_features_layer)
-        features_file_path = os.path.join(args.save_path, args.inner_features_file)
-        np.savez_compressed(features_file_path, **{'x': all_features})
-
-    all_detections = _get_detections(
+    detections_raw = _get_detections(
         generator,
         model,
         score_threshold=args.score_threshold,
         max_detections=args.max_detections,
-        save_path=args.save_path if args.save_output_imgs else None
+        save_path=args.save_path if args.save_output_imgs else None,
+        inner_layer_name=args.inner_features_layer if get_inner_features else None
     )
+
+    if get_inner_features:
+        all_detections, all_features = detections_raw
+        features_file_path = os.path.join(args.save_path, args.inner_features_file)
+        np.savez_compressed(features_file_path, **{'x': all_features})
+    else:
+        all_detections = detections_raw
 
     filtered_detections_df = pd.DataFrame(columns=['frame_path', 'class', 'x1', 'y1', 'x2', 'y2', 'confidence'])
     class_map = {v: k for k, v in generator.classes.items()}
